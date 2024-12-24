@@ -8,8 +8,7 @@
 	const { token } = data;
 
 	let map: mapboxgl.Map;
-	mapboxgl.accessToken =
-		'pk.eyJ1IjoiaWRldjMxMDUiLCJhIjoiY2t6YXNsM3cwMHgwdzJvcDQzbjN3czlpdSJ9.ARcnNt_TmtEfLqw-pbWZCg';
+	mapboxgl.accessToken = 'your-public-mapbox-key';
 
 	onMount(() => {
 		initMap();
