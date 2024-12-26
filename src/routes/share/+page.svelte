@@ -13,8 +13,7 @@
 	let watchLocationHandlerId = $state<number | undefined>();
 
 	let map: mapboxgl.Map | undefined;
-	mapboxgl.accessToken =
-		'pk.eyJ1IjoiaWRldjMxMDUiLCJhIjoiY201MXZzeHRhMXF3NzJxc2ZhY2tocmh2eSJ9.QB4Ijy-nhwCYkRebf7TxJg';
+	mapboxgl.accessToken = 'your-token';
 
 	let currentLocation = $state<{ lng: number; lat: number } | undefined>();
 	$inspect(currentLocation);
