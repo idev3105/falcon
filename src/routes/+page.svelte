@@ -1,11 +1,6 @@
 <script>
 	let token = '';
 
-	function handleCreate() {
-		// Logic for creating a session or room
-		console.log('Create button clicked');
-	}
-
 	function handleJoin() {
 		// Go to share page with token as params
 		window.location.href = `/share?token=${token}`;
@@ -17,9 +12,7 @@
 	<div class="flex items-center space-x-4">
 		<form method="POST" action="/create">
 			<input hidden />
-			<button type="submit" class="btn w-16 rounded bg-primary px-4 py-2" onclick={handleCreate}>
-				Create
-			</button>
+			<button type="submit" class="btn w-16 rounded bg-primary px-4 py-2"> Create </button>
 		</form>
 		<div>Or</div>
 		<form>

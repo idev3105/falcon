@@ -3,24 +3,113 @@
 	import 'mapbox-gl/dist/mapbox-gl.css';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
+	import { io } from 'socket.io-client';
 
 	let { data }: { data: PageData } = $props();
 	const { token } = data;
 
-	let map: mapboxgl.Map;
+	let socket = io('http://localhost:8080');
+
+	let watchLocationHandlerId = $state<number | undefined>();
+
+	let map: mapboxgl.Map | undefined;
 	mapboxgl.accessToken =
-		'pk.eyJ1IjoiaWRldjMxMDUiLCJhIjoiY2t6YXNsM3cwMHgwdzJvcDQzbjN3czlpdSJ9.ARcnNt_TmtEfLqw-pbWZCg';
+		'pk.eyJ1IjoiaWRldjMxMDUiLCJhIjoiY201MXZzeHRhMXF3NzJxc2ZhY2tocmh2eSJ9.QB4Ijy-nhwCYkRebf7TxJg';
+
+	let currentLocation = $state<{ lng: number; lat: number } | undefined>();
+	$inspect(currentLocation);
+	let currentLocationMarker: mapboxgl.Marker | undefined;
+
+	let teamateLocation = $state<{ lng: number; lat: number } | undefined>();
+	$inspect(teamateLocation);
+	let teamateLocationMarker: mapboxgl.Marker | undefined;
+
+	// currentLocation on map
+	$effect(() => {
+		currentLocation?.lat;
+		currentLocation?.lng;
+
+		// if map is not initialized, do nothing
+		if (!map) return;
+
+		// if currentLocation is undefined, it mean user is not sharing location
+		// so remove the marker
+		if (!currentLocation) {
+			currentLocationMarker?.remove();
+			currentLocationMarker = undefined;
+			return;
+		}
+
+		// if currentLocation is defined, fly to the location
+		// and add/move a marker
+		map.flyTo({ center: [currentLocation.lng, currentLocation.lat] });
+		if (!currentLocationMarker) {
+			currentLocationMarker = new mapboxgl.Marker()
+				.setLngLat([currentLocation.lng, currentLocation.lat])
+				.addTo(map);
+		} else {
+			currentLocationMarker.setLngLat([currentLocation.lng, currentLocation.lat]);
+		}
+
+		// send location to server
+		socket.emit('location', currentLocation);
+	});
+
+	// teamateLocation on map
+	$effect(() => {
+		teamateLocation?.lat;
+		teamateLocation?.lng;
+
+		// if map is not initialized, do nothing
+		if (!map) return;
+
+		// if teamateLocation is undefined, it mean user is not sharing location
+		// so remove the marker
+		if (!teamateLocation) {
+			teamateLocationMarker?.remove();
+			teamateLocationMarker = undefined;
+			return;
+		}
+
+		// if teamateLocation is defined
+		// and add/move a marker
+		if (!teamateLocationMarker) {
+			teamateLocationMarker = new mapboxgl.Marker()
+				.setLngLat([teamateLocation.lng, teamateLocation.lat])
+				.addTo(map);
+		} else {
+			teamateLocationMarker.setLngLat([teamateLocation.lng, teamateLocation.lat]);
+		}
+	});
 
 	onMount(() => {
 		initMap();
+
+		if (!map) {
+			alert('Init map failed');
+			return;
+		}
+
+		startSubcribeLocation();
 	});
 
-	function getCurrentLocation() {
+	function startLocationTracking() {
 		if (navigator.geolocation) {
-			navigator.geolocation.getCurrentPosition(
+			watchLocationHandlerId = navigator.geolocation.watchPosition(
 				(position) => {
-					const { latitude, longitude } = position.coords;
-					map.flyTo({ center: [longitude, latitude] });
+					console.log('Received location:', position.coords);
+
+					const { longitude, latitude } = position.coords;
+
+					if (!currentLocation) {
+						currentLocation = {
+							lng: longitude + Math.random() * 0.1,
+							lat: latitude + Math.random() * 0.1
+						};
+					} else {
+						currentLocation.lng = longitude + Math.random() * 0.1;
+						currentLocation.lat = latitude + Math.random() * 0.1;
+					}
 				},
 				(error) => {
 					console.error('Error getting location:', error);
@@ -29,63 +118,30 @@
 		}
 	}
 
+	function stopLocationTracking() {
+		if (watchLocationHandlerId) {
+			navigator.geolocation.clearWatch(watchLocationHandlerId);
+			watchLocationHandlerId = undefined;
+			currentLocation = undefined;
+		}
+	}
+
 	function initMap() {
 		map = new mapboxgl.Map({
 			container: 'map',
-			style: 'mapbox://styles/mapbox/streets-v11',
-			center: [-74.0066, 40.7135],
-			zoom: 15.5,
+			style: 'mapbox://styles/mapbox/streets-v12',
+			center: [105.81541523004084, 21.049416441831404],
+			zoom: 14,
 			pitch: 45,
 			bearing: -17.6,
 			antialias: true
 		});
+	}
 
-		map.on('style.load', () => {
-			const layers = map.getStyle()?.layers;
-
-			// find label layer to add symbol after
-			const labelLayerId = layers?.find(
-				(layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']
-			)?.id;
-
-			// Add a 3D building layer to the map
-			map.addLayer(
-				{
-					id: 'add-3d-buildings',
-					source: 'composite',
-					'source-layer': 'building',
-					filter: ['==', 'extrude', 'true'],
-					type: 'fill-extrusion',
-					minzoom: 15,
-					paint: {
-						'fill-extrusion-color': '#aaa',
-
-						// Use an 'interpolate' expression to
-						// add a smooth transition effect to
-						// the buildings as the user zooms in.
-						'fill-extrusion-height': [
-							'interpolate',
-							['linear'],
-							['zoom'],
-							15,
-							0,
-							15.05,
-							['get', 'height']
-						],
-						'fill-extrusion-base': [
-							'interpolate',
-							['linear'],
-							['zoom'],
-							15,
-							0,
-							15.05,
-							['get', 'min_height']
-						],
-						'fill-extrusion-opacity': 0.6
-					}
-				},
-				labelLayerId
-			);
+	function startSubcribeLocation() {
+		socket.emit('join', token);
+		socket.on('location', (location: { lat: number; lng: number }) => {
+			teamateLocation = location;
 		});
 	}
 
@@ -98,7 +154,15 @@
 
 <main>
 	<div id="map"></div>
-	<button class="btn absolute bottom-4 right-4 z-10" onclick={getCurrentLocation}>Share</button>
+	{#if watchLocationHandlerId}
+		<button class="btn absolute bottom-4 right-4 z-10 w-28" onclick={stopLocationTracking}>
+			Stop Sharing
+		</button>
+	{:else}
+		<button class="btn absolute bottom-4 right-4 z-10 w-28" onclick={startLocationTracking}
+			>Share</button
+		>
+	{/if}
 	<div class="absolute bottom-4 left-4 z-10 rounded bg-base-100 px-4 py-2">
 		{token}
 		<button class="btn rounded px-2 py-1" onclick={copyToken}>Copy</button>

@@ -15,8 +15,11 @@
 	"devDependencies": {
 		"@eslint/compat": "^1.2.3",
 		"@sveltejs/adapter-auto": "^3.0.0",
+		"@sveltejs/adapter-node": "^5.2.11",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
+		"@types/cors": "^2.8.17",
+		"@types/express": "^5.0.0",
 		"@types/mapbox-gl": "^3.4.1",
 		"autoprefixer": "^10.4.20",
 		"daisyui": "^4.12.22",
@@ -39,8 +42,12 @@
 	},
 	"dependencies": {
 		"@libsql/client": "^0.14.0",
+		"cors": "^2.8.5",
 		"dotenv": "^16.4.7",
 		"drizzle-orm": "^0.38.2",
-		"mapbox-gl": "^3.9.0"
+		"express": "^4.21.2",
+		"mapbox-gl": "^3.9.0",
+		"socket.io": "^4.8.1",
+		"socket.io-client": "^4.8.1"
 	}
 }
