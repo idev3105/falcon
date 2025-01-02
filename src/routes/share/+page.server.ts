@@ -1,22 +1,17 @@
 import type { PageServerLoad } from './$types';
-import { db } from '$lib/server/db';
-import { shareSessionsTable } from '$lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
+import { exist } from '$lib/server/services/room.service';
 
 export const load: PageServerLoad = async ({ url }) => {
-	const token = url.searchParams.get('token');
-	if (!token) {
-		error(400, 'Token must not be empty');
+	const id = url.searchParams.get('id');
+	if (!id) {
+		error(400, 'Id must not be empty');
 	}
-	const result = await db
-		.select({ count: sql`count(*)`.mapWith(Number) })
-		.from(shareSessionsTable)
-		.where(eq(shareSessionsTable.token, token));
-	if (result.length === 0 || result[0].count === 0) {
-		error(404, 'Token not found');
+	const result = await exist(id);
+	if (!result) {
+		error(404, 'Id not found');
 	}
 	return {
-		token: token
+		id: id
 	};
 };

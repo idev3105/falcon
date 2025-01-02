@@ -1,74 +1,75 @@
-// src/server.ts
+import 'dotenv/config';
 import express from 'express';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import cors from 'cors'; // Ensure this line is present
+import cors from 'cors';
+import type { RoomContext } from '$lib/types';
+import {
+	join as handleJoinEvent,
+	leave as handleLeaveEvent,
+	sendLocation
+} from './events/room.event';
+import { instrument } from '@socket.io/admin-ui';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
 
 const app = express();
 app.use(cors({ origin: '*' })); // Allow all domains for all routes
 
 const server = http.createServer(app);
+
+// create redis pub/sub adapter for socket io
+const pubClient = createClient({ url: 'redis://localhost:6379' });
+const subClient = pubClient.duplicate();
+
+await Promise.all([pubClient.connect(), subClient.connect()]);
+
 const io = new SocketIOServer(server, {
+	adapter: createAdapter(pubClient, subClient),
 	cors: {
 		origin: '*'
 	}
 });
+instrument(io, {
+	auth: false,
+	mode: 'development'
+});
 
-const rooms: Record<string, Set<string>> = {}; // Store rooms and their connected clients
-
-io.on('connection', (socket) => {
-	let currentRoom: string | null = null;
+io.on('connection', async (socket) => {
+	const roomContext: RoomContext = {
+		sessionId: socket.id
+	};
 
 	console.log('New client connected:', socket.id);
 
-	socket.on('join', (token: string) => {
-		currentRoom = token; // Use token as room identifier
-		if (!rooms[currentRoom]) {
-			rooms[currentRoom] = new Set();
-		}
-		rooms[currentRoom].add(socket.id);
-		socket.join(currentRoom);
-		console.log(`Client ${socket.id} joined room ${currentRoom}`);
+	socket.on('join', async (data: { roomId: string; name: string }) => {
+		roomContext.roomId = data.roomId;
+		roomContext.name = data.name;
+		await handleJoinEvent(socket, roomContext);
+		console.log(
+			`User ${roomContext.sessionId} - ${roomContext.name} joined room ${roomContext.roomId}`
+		);
 	});
 
-	socket.on('location', (location: { lat: number; lon: number }) => {
-		if (currentRoom) {
-			// Broadcast location to other clients in the same room
-			socket.to(currentRoom).emit('location', {
-				...location,
-				sender: socket.id // Optionally include sender ID
-			});
-		}
+	socket.on('leave', async () => {
+		await handleLeaveEvent(socket, roomContext);
+		console.log(`User ${roomContext.sessionId} - ${roomContext.name} left room`);
 	});
 
-	socket.on('disconnect', () => {
-		if (currentRoom) {
-			rooms[currentRoom].delete(socket.id);
-			if (rooms[currentRoom].size === 0) {
-				delete rooms[currentRoom]; // Clean up empty rooms
-			}
-		}
-		console.log('Client disconnected:', socket.id);
+	socket.on('location', async (location: { lat: number; lng: number }) => {
+		await sendLocation(socket, roomContext, location);
+		console.log(`User ${roomContext.sessionId} - ${roomContext.name} sent location`);
 	});
 
-	// Event for starting location sharing
-	socket.on('startShare', (roomId) => {
-		socket.to(roomId).emit('startShare', {
-			sender: socket.id
-		});
+	socket.on('disconnect', async () => {
+		await handleLeaveEvent(socket, roomContext);
+		console.log(`User ${roomContext.sessionId} - ${roomContext.name} disconnected`);
 	});
 
-	// Event for stopping location sharing
-	socket.on('stopShare', (roomId) => {
-		socket.to(roomId).emit('stopShare', {
-			sender: socket.id
-		});
+	socket.on('test', () => {
+		console.log('Test event received');
+		socket.emit('test');
 	});
-});
-
-// Serve static files or set up routes here if needed
-app.get('/', (req, res) => {
-	res.send('Socket.IO server is running');
 });
 
 // Start the server
