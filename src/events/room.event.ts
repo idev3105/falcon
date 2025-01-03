@@ -9,8 +9,8 @@ import type { RoomContext } from '$lib/types';
 
 export async function join(socket: Socket, context: RoomContext) {
 	if (!context.roomId || !context.name) return;
-	const room = await joinRoom(context.roomId, context.sessionId, context.name);
-	await socket.join(room.id);
+	await joinRoom(context.roomId, context.sessionId, context.name);
+	await socket.join(context.roomId);
 	await sendJoinEvent(socket, context);
 }
 
@@ -29,5 +29,5 @@ export async function sendLocation(
 	if (!context.roomId) return;
 	context.currentLocation = data;
 	await saveLocation(context.roomId, context.sessionId, context.currentLocation);
-	await socket.to(context.roomId).emit('location', context.currentLocation);
+	await socket.to(context.roomId).emit('locations', context.currentLocation);
 }

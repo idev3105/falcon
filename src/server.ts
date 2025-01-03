@@ -56,7 +56,7 @@ io.on('connection', async (socket) => {
 		console.log(`User ${roomContext.sessionId} - ${roomContext.name} left room`);
 	});
 
-	socket.on('location', async (location: { lat: number; lng: number }) => {
+	socket.on('locations', async (location: { lat: number; lng: number }) => {
 		await sendLocation(socket, roomContext, location);
 		console.log(`User ${roomContext.sessionId} - ${roomContext.name} sent location`);
 	});
@@ -64,11 +64,6 @@ io.on('connection', async (socket) => {
 	socket.on('disconnect', async () => {
 		await handleLeaveEvent(socket, roomContext);
 		console.log(`User ${roomContext.sessionId} - ${roomContext.name} disconnected`);
-	});
-
-	socket.on('test', () => {
-		console.log('Test event received');
-		socket.emit('test');
 	});
 });
 

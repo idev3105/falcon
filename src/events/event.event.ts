@@ -3,7 +3,6 @@ import type { Socket } from 'socket.io';
 
 export async function join(socket: Socket, context: RoomContext) {
 	if (!context.roomId) return;
-	console.log('Send join event', context);
 	await socket.to(context.roomId).emit('events', {
 		type: 'join',
 		data: { sessionId: context.sessionId }
