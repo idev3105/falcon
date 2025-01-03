@@ -18,7 +18,6 @@ export async function leave(socket: Socket, context: RoomContext) {
 	if (!context.roomId) return;
 	await leaveRoom(context.roomId, context.sessionId);
 	await sendLeaveEvent(socket, context);
-	socket.disconnect();
 }
 
 export async function sendLocation(
@@ -27,7 +26,6 @@ export async function sendLocation(
 	data: { lat: number; lng: number }
 ) {
 	if (!context.roomId) return;
-	context.currentLocation = data;
-	await saveLocation(context.roomId, context.sessionId, context.currentLocation);
-	await socket.to(context.roomId).emit('locations', context.currentLocation);
+	await saveLocation(context.roomId, context.sessionId, data);
+	await socket.to(context.roomId).emit('locations', data);
 }
