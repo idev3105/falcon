@@ -1,13 +1,16 @@
 import 'dotenv/config';
-import { redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { db } from '$lib/server/db';
-import { shareSessionsTable } from '$lib/server/db/schema';
+import { create } from '$lib/server/services/room.service';
 
 export const actions = {
-	default: async () => {
-		const token = crypto.randomUUID();
-		await db.insert(shareSessionsTable).values({ token });
-		redirect(303, '/share?token=' + token);
+	default: async ({ request }) => {
+		const data = await request.formData();
+		const name = data.get('name');
+		if (!name || typeof name !== 'string') {
+			error(400, 'Name must not be empty');
+		}
+		const room = await create(name);
+		redirect(303, '/share?id=' + room.id);
 	}
 } satisfies Actions;

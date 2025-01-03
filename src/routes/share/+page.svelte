@@ -6,7 +6,7 @@
 	import { io } from 'socket.io-client';
 
 	let { data }: { data: PageData } = $props();
-	const { token } = data;
+	const { id } = data;
 
 	let socket = io('http://localhost:8080');
 
@@ -137,16 +137,11 @@
 		});
 	}
 
-	function startSubcribeLocation() {
-		socket.emit('join', token);
-		socket.on('location', (location: { lat: number; lng: number }) => {
-			teamateLocation = location;
-		});
-	}
+	function startSubcribeLocation() {}
 
-	function copyToken() {
-		if (!token) return;
-		navigator.clipboard.writeText(token);
+	function copyRoomId() {
+		if (!id) return;
+		navigator.clipboard.writeText(id);
 		alert('Token copied to clipboard!');
 	}
 </script>
@@ -163,8 +158,8 @@
 		>
 	{/if}
 	<div class="absolute bottom-4 left-4 z-10 rounded bg-base-100 px-4 py-2">
-		{token}
-		<button class="btn rounded px-2 py-1" onclick={copyToken}>Copy</button>
+		{id}
+		<button class="btn rounded px-2 py-1" onclick={copyRoomId}>Copy</button>
 	</div>
 </main>
 

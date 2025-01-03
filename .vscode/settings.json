@@ -9,5 +9,6 @@
 	"svelte.enable-ts-plugin": true,
 	"[typescript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	}
+	},
+	"bun.debugTerminal.enabled": true
 }
